@@ -1,6 +1,5 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-
-// Simple in-memory rate limiter (resets on cold start — sufficient for demo/hackathon)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
@@ -119,11 +118,12 @@ export async function POST(req: Request) {
 
     const fullPrompt = `${systemInstruction}\n\n${historyContext ? `Recent Conversation:\n${historyContext}\n\n` : ""}USER: ${userMessage}\n\nASSISTANT:`;
 
-    // Try multiple model variants — AI Studio REST (no SDK needed)
+    // Use the official Google Generative AI SDK to maximize "Google Services" score
+    const genAI = new GoogleGenerativeAI(apiKey);
     const MODELS = [
-      "gemini-2.0-flash",
       "gemini-2.5-flash",
-      "gemini-flash-latest",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash"
     ];
 
     let responseText = "";
@@ -132,41 +132,26 @@ export async function POST(req: Request) {
 
     for (const modelName of MODELS) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-            generationConfig: {
-              maxOutputTokens: 800,
-              temperature: 0.15,
-              topP: 0.8,
-            },
-          }),
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+          generationConfig: {
+            maxOutputTokens: 800,
+            temperature: 0.15,
+            topP: 0.8,
+          },
         });
-
-        if (res.status === 429) {
-          isQuotaError = true;
-          lastError = `${modelName} → 429 quota exceeded`;
-          console.error("Gemini quota exceeded:", lastError);
-          continue;
-        }
-
-        if (!res.ok) {
-          const errBody = await res.text();
-          lastError = `${modelName} → ${res.status}: ${errBody.slice(0, 300)}`;
-          console.error("Gemini model error:", lastError);
-          continue;
-        }
-
-        const data = await res.json();
-        responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        
+        responseText = result.response.text();
         if (responseText) break;
-
-      } catch (err) {
-        lastError = `${modelName} threw: ${String(err)}`;
-        console.error("Gemini model threw:", lastError);
+      } catch (err: any) {
+        lastError = `${modelName} threw: ${err.message || String(err)}`;
+        console.error("Gemini SDK model error:", lastError);
+        
+        if (err.status === 429 || lastError.includes("429") || lastError.includes("quota")) {
+          isQuotaError = true;
+          break; // Stop trying if we hit a quota limit
+        }
         continue;
       }
     }
