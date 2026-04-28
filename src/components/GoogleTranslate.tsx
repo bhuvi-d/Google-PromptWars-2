@@ -37,8 +37,7 @@ export function GoogleTranslate() {
     <>
       <div
         id="google_translate_element"
-        aria-label="Google Translate widget"
-        className="hidden" // hidden by default — progressively shown by CSS if widget loads
+        className="fixed bottom-4 left-4 z-50 bg-white p-2 rounded-xl shadow-lg border border-slate-200"
       />
       <Script
         src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"

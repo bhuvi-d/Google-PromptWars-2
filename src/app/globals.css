@@ -181,3 +181,26 @@
 html.large-text-mode {
   font-size: 115% !important;
 }
+
+/* 
+ * Google Translate overrides
+ * 1. Hide the top banner that shifts the layout 
+ * 2. Hide the tooltip that appears on hover over translated text
+ * 3. Force the body back to the top
+ */
+.goog-te-banner-frame.skiptranslate {
+  display: none !important;
+}
+
+body {
+  top: 0px !important;
+}
+
+#goog-gt-tt {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
