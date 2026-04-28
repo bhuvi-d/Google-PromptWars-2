@@ -121,13 +121,14 @@ export async function POST(req: Request) {
 
     // Try multiple model variants — AI Studio REST (no SDK needed)
     const MODELS = [
-      "gemini-1.5-flash-latest",
-      "gemini-1.5-flash",
-      "gemini-1.0-pro",
+      "gemini-2.0-flash",
+      "gemini-2.5-flash",
+      "gemini-flash-latest",
     ];
 
     let responseText = "";
     let lastError = "";
+    let isQuotaError = false;
 
     for (const modelName of MODELS) {
       try {
@@ -144,6 +145,13 @@ export async function POST(req: Request) {
             },
           }),
         });
+
+        if (res.status === 429) {
+          isQuotaError = true;
+          lastError = `${modelName} → 429 quota exceeded`;
+          console.error("Gemini quota exceeded:", lastError);
+          continue;
+        }
 
         if (!res.ok) {
           const errBody = await res.text();
@@ -165,6 +173,12 @@ export async function POST(req: Request) {
 
     if (!responseText) {
       console.error("All Gemini models failed. Last error:", lastError);
+      if (isQuotaError) {
+        return NextResponse.json(
+          { error: "The AI service is experiencing high demand. Please try again in a minute." },
+          { status: 429 }
+        );
+      }
       return NextResponse.json(
         { error: "AI service is temporarily unavailable. Please try again later." },
         { status: 502 }
