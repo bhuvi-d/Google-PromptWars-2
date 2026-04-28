@@ -119,36 +119,29 @@ export async function POST(req: Request) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
-      systemInstruction,
     });
 
-    // Build history — strip initial assistant greeting for Gemini
-    let historyMessages = messages.slice(0, -1);
-    if (historyMessages.length > 0 && historyMessages[0].role === "assistant") {
-      historyMessages = historyMessages.slice(1);
-    }
-
-    const formattedHistory = historyMessages.map((msg) => ({
-      role: msg.role === "user" ? "user" : "model",
-      parts: [{ text: sanitizeInput(msg.content) }],
-    }));
-
-    const currentMessage = sanitizeInput(messages[messages.length - 1].content);
-
-    if (!currentMessage) {
+    const userMessage = sanitizeInput(messages[messages.length - 1].content);
+    if (!userMessage) {
       return NextResponse.json({ error: "Message cannot be empty." }, { status: 400 });
     }
 
-    const chat = model.startChat({
-      history: formattedHistory,
+    // Include recent history in the prompt for context since we're using generateContent
+    const historyContext = messages.slice(-5, -1)
+      .map(m => `${m.role.toUpperCase()}: ${sanitizeInput(m.content)}`)
+      .join("\n");
+
+    const fullPrompt = `${systemInstruction}\n\nRecent History:\n${historyContext}\n\nUSER: ${userMessage}\n\nASSISTANT:`;
+
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
       generationConfig: {
         maxOutputTokens: 800,
-        temperature: 0.15, // Low temperature = more factual, less hallucination
+        temperature: 0.15,
         topP: 0.8,
       },
     });
 
-    const result = await chat.sendMessage(currentMessage);
     const responseText = result.response.text();
 
     return NextResponse.json(
