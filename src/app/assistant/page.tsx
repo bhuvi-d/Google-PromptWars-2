@@ -12,12 +12,7 @@ type Message = {
   content: string;
 };
 
-declare global {
-  interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
-  }
-}
+// SpeechRecognition types are declared globally in src/types/google.d.ts
 
 const SUGGESTED_QUESTIONS = [
   "How do I register to vote?",
@@ -44,6 +39,7 @@ export default function AssistantPage() {
   const [error, setError] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -60,12 +56,14 @@ export default function AssistantPage() {
     recognitionRef.current.interimResults = false;
     recognitionRef.current.lang = state.language === "hi" ? "hi-IN" : "en-IN";
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognitionRef.current.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setInput(transcript);
       setIsListening(false);
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognitionRef.current.onerror = (event: any) => {
       console.warn("Speech recognition error:", event.error);
       setIsListening(false);
@@ -136,9 +134,10 @@ export default function AssistantPage() {
       ]);
 
       trackEvent("chat_response_received", { region: state.region });
-    } catch (err: any) {
-      setError(err.message);
-      trackEvent("chat_error", { error_message: err.message });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
+      trackEvent("chat_error", { error_message: message });
     } finally {
       setIsLoading(false);
     }

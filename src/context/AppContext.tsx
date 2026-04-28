@@ -45,37 +45,40 @@ function calculateScore(tasks: string[]): number {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [appState, setAppState] = useState<AppState>(initialState);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
+  /**
+   * Initialise state directly from localStorage (client-only).
+   * Using a lazy initialiser avoids the need for a separate isClient flag
+   * and the cascading-setState pattern that triggered the lint warning.
+   */
+  const [appState, setAppState] = useState<AppState>(() => {
+    if (typeof window === "undefined") return initialState;
     try {
       const saved = localStorage.getItem("votexa_v2_state");
       if (saved) {
-        const parsed = JSON.parse(saved);
-        // Merge with defaults to handle new fields
-        setAppState({ ...initialState, ...parsed });
+        const parsed = JSON.parse(saved) as Partial<AppState>;
+        return { ...initialState, ...parsed };
       }
     } catch {
       // Silently reset on parse error
     }
-  }, []);
+    return initialState;
+  });
 
   useEffect(() => {
-    if (!isClient) return;
+    // Persist state to localStorage whenever it changes
     try {
       localStorage.setItem("votexa_v2_state", JSON.stringify(appState));
     } catch {
       // Storage may be full — silently fail
     }
 
+    // Apply large-text CSS class to root element
     if (appState.isLargeText) {
       document.documentElement.classList.add("large-text-mode");
     } else {
       document.documentElement.classList.remove("large-text-mode");
     }
-  }, [appState, isClient]);
+  }, [appState]);
 
   const setLanguage = useCallback((lang: Language) => {
     setAppState(s => ({ ...s, language: lang }));

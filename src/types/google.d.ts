@@ -18,6 +18,12 @@ declare global {
 
     /** Callback registered for Google Translate widget initialisation */
     googleTranslateElementInit?: () => void;
+
+    /** Web Speech API — varies by browser vendor */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SpeechRecognition?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    webkitSpeechRecognition?: any;
   }
 }
 

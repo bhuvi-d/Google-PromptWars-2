@@ -125,7 +125,7 @@ export function Header() {
                   <button
                     key={r.value}
                     onClick={() => {
-                      setRegion(r.value as any);
+                      setRegion(r.value as import("@/context/AppContext").Region);
                       setRegionOpen(false);
                       if (r.value === "india") setStateOpen(true);
                     }}

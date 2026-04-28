@@ -13,12 +13,16 @@ function trackEvent(
   action: string,
   params?: Record<string, string | number | boolean>
 ): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (typeof window === "undefined" || !(window as any).gtag) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).gtag("event", action, params);
 }
 
 function trackPageView(url: string, title?: string): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (typeof window === "undefined" || !(window as any).gtag || !GA_MEASUREMENT_ID) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).gtag("config", GA_MEASUREMENT_ID, {
     page_path: url,
     page_title: title,
@@ -32,10 +36,12 @@ describe("trackEvent", () => {
 
   beforeEach(() => {
     gtagMock = jest.fn();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).window = { gtag: gtagMock };
   });
 
   afterEach(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (global as any).window;
   });
 
@@ -51,11 +57,13 @@ describe("trackEvent", () => {
   });
 
   it("does not throw when window.gtag is undefined", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).window = {};
     expect(() => trackEvent("some_event")).not.toThrow();
   });
 
   it("does not call gtag when window is undefined", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (global as any).window;
     expect(() => trackEvent("some_event")).not.toThrow();
   });
@@ -72,14 +80,17 @@ describe("trackPageView", () => {
 
   beforeEach(() => {
     gtagMock = jest.fn();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).window = { gtag: gtagMock };
   });
 
   afterEach(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (global as any).window;
   });
 
   it("does not throw when window.gtag is undefined", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).window = {};
     expect(() => trackPageView("/assistant")).not.toThrow();
   });
