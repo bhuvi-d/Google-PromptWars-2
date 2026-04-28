@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { User, MapPin, Briefcase, Calendar, CheckCircle2, ArrowRight, BookOpen, ChevronRight, Activity, Map, ArrowDown } from "lucide-react";
+import { User, MapPin, Briefcase, Calendar, CheckCircle2, ArrowRight, BookOpen, ChevronRight, Activity, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppContext } from "@/context/AppContext";
 import { useTranslation } from "@/lib/i18n";
+import { PollingBoothMap } from "@/components/PollingBoothMap";
+import { trackEvent } from "@/lib/analytics";
 
 type Profile = {
   ageGroup: string;
@@ -15,6 +17,7 @@ type Profile = {
 
 export default function JourneyPage() {
   const { state, completeTask, uncompleteTask } = useAppContext();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const t = useTranslation(state.language);
   const [step, setStep] = useState<"profile" | "roadmap">("profile");
   const [profile, setProfile] = useState<Profile>({
@@ -75,7 +78,7 @@ export default function JourneyPage() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4">Personalized Election Journey</h1>
-            <p className="text-lg md:text-xl text-slate-600 font-medium">Tell us a little about yourself, and we'll generate a custom step-by-step roadmap.</p>
+            <p className="text-lg md:text-xl text-slate-600 font-medium">Tell us a little about yourself, and we&apos;ll generate a custom step-by-step roadmap.</p>
           </div>
           
           <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 p-8 md:p-12">
@@ -141,7 +144,16 @@ export default function JourneyPage() {
               </div>
 
               <button 
-                onClick={() => setStep("roadmap")}
+                onClick={() => {
+                  setStep("roadmap");
+                  trackEvent("roadmap_generated", {
+                    age_group: profile.ageGroup,
+                    occupation: profile.occupation,
+                    is_first_time: profile.isFirstTime,
+                    moved_recently: profile.movedRecently,
+                    region: state.region,
+                  });
+                }}
                 className="w-full mt-8 bg-primary text-white font-bold py-4 rounded-2xl hover:bg-primary/90 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 text-lg"
               >
                 Generate My Roadmap <ArrowRight className="w-5 h-5" />
@@ -223,6 +235,11 @@ export default function JourneyPage() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Google Maps: Polling Booth Locator */}
+            <div className="mt-8">
+              <PollingBoothMap region={state.region} stateName={state.state} />
             </div>
           </div>
 

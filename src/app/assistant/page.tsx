@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Bot, User, Loader2, AlertCircle, Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppContext } from "@/context/AppContext";
+import { trackEvent } from "@/lib/analytics";
 
 type Message = {
   id: string;
@@ -105,6 +106,13 @@ export default function AssistantPage() {
     setError(null);
 
     try {
+      // Track each AI message sent as a GA4 event
+      trackEvent("chat_message_sent", {
+        language: state.language,
+        region: state.region,
+        message_length: text.trim().length,
+      });
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,8 +134,11 @@ export default function AssistantPage() {
         ...prev,
         { id: (Date.now() + 1).toString(), role: "assistant", content: data.content },
       ]);
+
+      trackEvent("chat_response_received", { region: state.region });
     } catch (err: any) {
       setError(err.message);
+      trackEvent("chat_error", { error_message: err.message });
     } finally {
       setIsLoading(false);
     }

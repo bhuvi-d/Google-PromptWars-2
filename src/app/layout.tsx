@@ -3,10 +3,17 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
 import { Header } from "@/components/Header";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { GoogleTranslate } from "@/components/GoogleTranslate";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
+/**
+ * Inter — loaded via next/font/google (Google Fonts).
+ * `display: swap` prevents invisible text during font load (perf + a11y).
+ */
 const inter = Inter({
   subsets: ["latin"],
-  display: "swap", // Prevents invisible text during font load (perf + a11y)
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -16,11 +23,22 @@ export const metadata: Metadata = {
   },
   description:
     "VOTEXA helps citizens understand the election process, check voter eligibility, prepare documents, and get instant AI-powered answers to any voting question.",
-  keywords: ["election", "voting", "voter registration", "election guide", "AI assistant", "civic tech"],
+  keywords: [
+    "election",
+    "voting",
+    "voter registration",
+    "election guide",
+    "AI assistant",
+    "civic tech",
+    "ECI",
+    "NVSP",
+    "Google Gemini",
+  ],
   authors: [{ name: "VOTEXA" }],
   openGraph: {
     title: "VOTEXA — AI-Powered Election Assistant",
-    description: "Your trusted guide to voting, registration, and election readiness.",
+    description:
+      "Your trusted guide to voting, registration, and election readiness.",
     type: "website",
   },
   robots: {
@@ -39,6 +57,12 @@ export default function RootLayout({
       <body
         className={`${inter.className} min-h-screen flex flex-col bg-slate-50`}
       >
+        {/* Google Analytics 4 — loads after hydration, IP-anonymised */}
+        <GoogleAnalytics />
+
+        {/* Google Translate widget — lazy-loaded, no layout impact */}
+        <GoogleTranslate />
+
         <AppProvider>
           {/* Skip to main content — critical accessibility for keyboard/screen reader users */}
           <a
@@ -51,26 +75,54 @@ export default function RootLayout({
           <Header />
 
           <main id="main-content" className="flex-1 w-full mx-auto" tabIndex={-1}>
-            {children}
+            {/* ErrorBoundary prevents uncaught render errors from showing blank page */}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </main>
 
-          <footer className="border-t py-8 md:py-10 bg-white shadow-inner" role="contentinfo">
+          <footer
+            className="border-t py-8 md:py-10 bg-white shadow-inner"
+            role="contentinfo"
+          >
             <div className="container mx-auto px-4 flex flex-col items-center justify-between gap-6 md:flex-row max-w-6xl">
               <p className="text-center text-sm md:text-base leading-loose text-slate-500 md:text-left max-w-xl">
-                Built to empower voters. Always verify official information with your local election commission.
-                {" "}India:{" "}
-                <a href="https://eci.gov.in" target="_blank" rel="noopener noreferrer" className="text-primary font-semibold hover:underline">
+                Built to empower voters. Always verify official information with
+                your local election commission.{" "}
+                India:{" "}
+                <a
+                  href="https://eci.gov.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-semibold hover:underline"
+                >
                   eci.gov.in
                 </a>
               </p>
-              <nav aria-label="Footer links" className="flex items-center gap-6 text-sm font-semibold text-slate-500">
-                <a href="https://eci.gov.in" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+              <nav
+                aria-label="Footer links"
+                className="flex items-center gap-6 text-sm font-semibold text-slate-500"
+              >
+                <a
+                  href="https://eci.gov.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
                   Official ECI
                 </a>
-                <a href="https://voters.eci.gov.in" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                <a
+                  href="https://voters.eci.gov.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
                   Voter Portal
                 </a>
-                <a href="https://nvsp.in" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                <a
+                  href="https://nvsp.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
                   NVSP
                 </a>
               </nav>

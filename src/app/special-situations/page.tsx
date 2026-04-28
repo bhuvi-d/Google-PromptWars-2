@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ChevronDown, MapPin, SearchX, Users, Accessibility, UserX, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useAppContext } from "@/context/AppContext";
 
 const situations = [
   {
@@ -69,7 +68,7 @@ export default function SpecialSituationsPage() {
           Special Situations
         </h1>
         <p className="text-xl text-slate-600 font-medium max-w-2xl mx-auto leading-relaxed">
-          Life is complicated. Voting shouldn't be. Find specific guidance for your unique situation.
+          Life is complicated. Voting shouldn&apos;t be. Find specific guidance for your unique situation.
         </p>
       </div>
 

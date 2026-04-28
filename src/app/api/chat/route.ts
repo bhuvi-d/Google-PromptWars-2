@@ -40,10 +40,10 @@ function buildSystemInstruction(language: string, region: string, stateName: str
   const regionContext = region === "india"
     ? `The user is in INDIA${stateName ? `, specifically in ${stateName}` : ""}. Use Indian election terminology: ECI (Election Commission of India), EPIC (Voter ID), NVSP portal, EVM (Electronic Voting Machine), Form 6 for registration, Form 8 for address change, NOTA option.`
     : region === "usa"
-    ? "The user is in the USA. Use American election terminology: Polling places, Precinct, Absentee ballot, Primary/General elections, Secretary of State for registration."
-    : region === "uk"
-    ? "The user is in the UK. Use British election terminology: Polling stations, Electoral register, Royal Mail postal vote, Returning officer."
-    : "The user's country is not specified. Provide general election education.";
+      ? "The user is in the USA. Use American election terminology: Polling places, Precinct, Absentee ballot, Primary/General elections, Secretary of State for registration."
+      : region === "uk"
+        ? "The user is in the UK. Use British election terminology: Polling stations, Electoral register, Royal Mail postal vote, Returning officer."
+        : "The user's country is not specified. Provide general election education.";
 
   const profileContext = profile ? `\n\nUser profile context: ${sanitizeInput(profile)}` : "";
 

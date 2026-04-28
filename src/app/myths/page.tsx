@@ -1,6 +1,6 @@
 "use client";
 
-import { HelpCircle, AlertTriangle, ShieldCheck, ThumbsUp, ChevronRight } from "lucide-react";
+import { HelpCircle, AlertTriangle, ShieldCheck, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -101,7 +101,7 @@ function FlipCard({ myth, fact }: { myth: string; fact: string }) {
             <AlertTriangle className="w-8 h-8" />
           </div>
           <span className="text-sm font-bold text-red-500 uppercase tracking-widest mb-3">Myth</span>
-          <h3 className="text-xl font-bold text-slate-900 leading-relaxed">"{myth}"</h3>
+          <h3 className="text-xl font-bold text-slate-900 leading-relaxed">&quot;{myth}&quot;</h3>
           <p className="absolute bottom-6 text-slate-400 text-sm font-medium animate-pulse">Click to reveal truth</p>
         </div>
 
