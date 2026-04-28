@@ -1,34 +1,30 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
 // Simple in-memory rate limiter (resets on cold start — sufficient for demo/hackathon)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 20; // requests
-const RATE_WINDOW_MS = 60_000; // per minute
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 60_000;
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
   const entry = rateLimitMap.get(ip);
-
   if (!entry || now > entry.resetAt) {
     rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
     return true;
   }
-
   if (entry.count >= RATE_LIMIT) return false;
-
   entry.count += 1;
   return true;
 }
 
 function sanitizeInput(text: string): string {
   return text
-    .replace(/<script[^>]*>.*?<\/script>/gis, "") // Remove script blocks entirely
-    .replace(/<style[^>]*>.*?<\/style>/gis, "")   // Remove style blocks entirely
-    .replace(/<[^>]*>/g, "")                        // Strip remaining HTML tags
-    .replace(/\[INST\]|\[\/INST\]|<s>|<\/s>/gi, "") // LLM injection patterns
+    .replace(/<script[^>]*>.*?<\/script>/gis, "")
+    .replace(/<style[^>]*>.*?<\/style>/gis, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\[INST\]|\[\/INST\]|<s>|<\/s>/gi, "")
     .trim()
-    .slice(0, 1000); // Hard cap at 1000 chars
+    .slice(0, 1000);
 }
 
 function buildSystemInstruction(language: string, region: string, stateName: string, profile?: string): string {
@@ -37,13 +33,14 @@ function buildSystemInstruction(language: string, region: string, stateName: str
       ? "CRITICAL: You MUST respond entirely in Hindi (Devanagari script)."
       : "CRITICAL: You MUST respond entirely in English.";
 
-  const regionContext = region === "india"
-    ? `The user is in INDIA${stateName ? `, specifically in ${stateName}` : ""}. Use Indian election terminology: ECI (Election Commission of India), EPIC (Voter ID), NVSP portal, EVM (Electronic Voting Machine), Form 6 for registration, Form 8 for address change, NOTA option.`
-    : region === "usa"
+  const regionContext =
+    region === "india"
+      ? `The user is in INDIA${stateName ? `, specifically in ${stateName}` : ""}. Use Indian election terminology: ECI, EPIC (Voter ID), NVSP portal, EVM, Form 6 for registration, Form 8 for address change, NOTA option.`
+      : region === "usa"
       ? "The user is in the USA. Use American election terminology: Polling places, Precinct, Absentee ballot, Primary/General elections, Secretary of State for registration."
       : region === "uk"
-        ? "The user is in the UK. Use British election terminology: Polling stations, Electoral register, Royal Mail postal vote, Returning officer."
-        : "The user's country is not specified. Provide general election education.";
+      ? "The user is in the UK. Use British election terminology: Polling stations, Electoral register, Royal Mail postal vote, Returning officer."
+      : "The user's country is not specified. Provide general election education.";
 
   const profileContext = profile ? `\n\nUser profile context: ${sanitizeInput(profile)}` : "";
 
@@ -65,7 +62,6 @@ ${langDirective}`;
 
 export async function POST(req: Request) {
   try {
-    // Rate limiting by IP
     const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
     if (!checkRateLimit(ip)) {
       return NextResponse.json(
@@ -74,7 +70,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Parse and validate body
     let body: unknown;
     try {
       body = await req.json();
@@ -94,7 +89,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid messages format." }, { status: 400 });
     }
 
-    // Validate each message
     for (const msg of messages) {
       if (!msg.role || !msg.content || typeof msg.content !== "string") {
         return NextResponse.json({ error: "Malformed message entry." }, { status: 400 });
@@ -103,10 +97,7 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "Service temporarily unavailable." },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
     }
 
     const systemInstruction = buildSystemInstruction(
@@ -121,79 +112,63 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message cannot be empty." }, { status: 400 });
     }
 
-    // Include recent history in the prompt for context
-    const historyContext = messages.slice(-5, -1)
-      .map(m => `${m.role.toUpperCase()}: ${sanitizeInput(m.content)}`)
+    const historyContext = messages
+      .slice(-6, -1)
+      .map((m) => `${m.role === "user" ? "USER" : "ASSISTANT"}: ${sanitizeInput(m.content)}`)
       .join("\n");
 
-    const fullPrompt = `${systemInstruction}\n\nRecent History:\n${historyContext}\n\nUSER: ${userMessage}\n\nASSISTANT:`;
+    const fullPrompt = `${systemInstruction}\n\n${historyContext ? `Recent Conversation:\n${historyContext}\n\n` : ""}USER: ${userMessage}\n\nASSISTANT:`;
+
+    // Try multiple model variants — AI Studio REST (no SDK needed)
+    const MODELS = [
+      "gemini-1.5-flash-latest",
+      "gemini-1.5-flash",
+      "gemini-1.0-pro",
+    ];
 
     let responseText = "";
-    let finalToken = apiKey;
-    let projectId = "promptwars-2-494616";
+    let lastError = "";
 
-    // Try to get fresh token and project ID from GCP Metadata Server (only works on Cloud Run)
-    try {
-      const [tokenRes, projectRes] = await Promise.all([
-        fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", {
-          headers: { "Metadata-Flavor": "Google" }
-        }),
-        fetch("http://metadata.google.internal/computeMetadata/v1/project/project-id", {
-          headers: { "Metadata-Flavor": "Google" }
-        })
-      ]);
+    for (const modelName of MODELS) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+            generationConfig: {
+              maxOutputTokens: 800,
+              temperature: 0.15,
+              topP: 0.8,
+            },
+          }),
+        });
 
-      if (tokenRes.ok) {
-        const tokenData = await tokenRes.json();
-        finalToken = tokenData.access_token;
+        if (!res.ok) {
+          const errBody = await res.text();
+          lastError = `${modelName} → ${res.status}: ${errBody.slice(0, 300)}`;
+          console.error("Gemini model error:", lastError);
+          continue;
+        }
+
+        const data = await res.json();
+        responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        if (responseText) break;
+
+      } catch (err) {
+        lastError = `${modelName} threw: ${String(err)}`;
+        console.error("Gemini model threw:", lastError);
+        continue;
       }
-      if (projectRes.ok) {
-        projectId = await projectRes.text();
-      }
-    } catch (e) {
-      console.warn("Metadata server unavailable, falling back to env vars.");
     }
 
-    // Use Vertex AI REST API with the detected token
-    const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${projectId}/locations/us-central1/publishers/google/models/gemini-1.5-flash:generateContent`;
-    
-    const response = await fetch(vertexUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${finalToken}`
-      },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-        generationConfig: {
-          maxOutputTokens: 800,
-          temperature: 0.15,
-          topP: 0.8,
-        },
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      // If Vertex fails, try one last fallback to AI Studio if the key looks like an AIza key
-      if (apiKey.startsWith("AIza")) {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-          generationConfig: {
-            maxOutputTokens: 800,
-            temperature: 0.15,
-            topP: 0.8,
-          },
-        });
-        responseText = result.response.text();
-      } else {
-        throw new Error(`Vertex AI Error (${response.status}): ${errorData}`);
-      }
-    } else {
-      const data = await response.json();
-      responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
+    if (!responseText) {
+      console.error("All Gemini models failed. Last error:", lastError);
+      return NextResponse.json(
+        { error: "AI service is temporarily unavailable. Please try again later." },
+        { status: 502 }
+      );
     }
 
     return NextResponse.json(
@@ -205,9 +180,9 @@ export async function POST(req: Request) {
         },
       }
     );
+
   } catch (error) {
-    // Don't leak internal error details to the client
-    console.error("Gemini API Error:", error);
+    console.error("Chat API unhandled error:", error);
     return NextResponse.json(
       { error: "Failed to generate response. Please try again later." },
       { status: 500 }
