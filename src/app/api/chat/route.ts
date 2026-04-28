@@ -116,33 +116,61 @@ export async function POST(req: Request) {
       profile
     );
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-    });
-
     const userMessage = sanitizeInput(messages[messages.length - 1].content);
     if (!userMessage) {
       return NextResponse.json({ error: "Message cannot be empty." }, { status: 400 });
     }
 
-    // Include recent history in the prompt for context since we're using generateContent
+    // Include recent history in the prompt for context
     const historyContext = messages.slice(-5, -1)
       .map(m => `${m.role.toUpperCase()}: ${sanitizeInput(m.content)}`)
       .join("\n");
 
     const fullPrompt = `${systemInstruction}\n\nRecent History:\n${historyContext}\n\nUSER: ${userMessage}\n\nASSISTANT:`;
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-      generationConfig: {
-        maxOutputTokens: 800,
-        temperature: 0.15,
-        topP: 0.8,
-      },
-    });
+    let responseText = "";
 
-    const responseText = result.response.text();
+    // If the key looks like an access token (AQ...), use Vertex AI REST API
+    if (apiKey.startsWith("AQ") || apiKey.length > 100) {
+      const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/promptwars-2-494616/locations/us-central1/publishers/google/models/gemini-1.5-flash:generateContent`;
+      
+      const response = await fetch(vertexUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+          generationConfig: {
+            maxOutputTokens: 800,
+            temperature: 0.15,
+            topP: 0.8,
+          },
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Vertex AI Error (${response.status}): ${errorData}`);
+      }
+
+      const data = await response.json();
+      responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
+    } else {
+      // AI Studio Fallback
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+        generationConfig: {
+          maxOutputTokens: 800,
+          temperature: 0.15,
+          topP: 0.8,
+        },
+      });
+      responseText = result.response.text();
+    }
 
     return NextResponse.json(
       { role: "assistant", content: responseText },
