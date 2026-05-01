@@ -5,6 +5,8 @@ import { AppProvider } from "@/context/AppContext";
 import { Header } from "@/components/Header";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { GoogleTranslate } from "@/components/GoogleTranslate";
+import { FirebaseAnalyticsProvider } from "@/components/FirebaseAnalyticsProvider";
+import { NavigationTracker } from "@/components/NavigationTracker";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
@@ -59,6 +61,12 @@ export default function RootLayout({
       >
         {/* Google Analytics 4 — loads after hydration, IP-anonymised */}
         <GoogleAnalytics />
+
+        {/* Firebase Analytics — initialises Firebase SDK for event logging */}
+        <FirebaseAnalyticsProvider />
+
+        {/* Tracks route changes and fires page_view events */}
+        <NavigationTracker />
 
         {/* Google Translate widget — lazy-loaded, no layout impact */}
         <GoogleTranslate />

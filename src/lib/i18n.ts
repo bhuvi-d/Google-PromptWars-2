@@ -30,6 +30,11 @@ export const translations = {
     "feat.3.desc": "Track important dates, from registration deadlines to counting day.",
     "feat.4.title": "Special Situations",
     "feat.4.desc": "Recently moved? Lost ID? Find specific guidance for your unique situation.",
+    
+    // AI Section
+    "home.ai.title": "Confused? Ask our AI Assistant",
+    "home.ai.subtitle": "Powered by Google Gemini, our intelligent assistant provides accurate, structured, and calm answers to all your election-related questions in seconds.",
+    "home.ai.btn": "Try the AI Assistant now",
   },
   hi: {
     // Header
@@ -62,6 +67,11 @@ export const translations = {
     "feat.3.desc": "पंजीकरण की समय सीमा से लेकर मतगणना के दिन तक, महत्वपूर्ण तिथियों को ट्रैक करें।",
     "feat.4.title": "विशेष स्थितियाँ",
     "feat.4.desc": "हाल ही में स्थानांतरित हुए? आईडी खो गई? अपनी अनूठी स्थिति के लिए विशिष्ट मार्गदर्शन प्राप्त करें।",
+    
+    // AI Section
+    "home.ai.title": "उलझन में हैं? हमारे एआई सहायक से पूछें",
+    "home.ai.subtitle": "Google Gemini द्वारा संचालित, हमारा बुद्धिमान सहायक आपके सभी चुनाव-संबंधी प्रश्नों के सटीक, संरचित और स्पष्ट उत्तर कुछ ही सेकंड में प्रदान करता है।",
+    "home.ai.btn": "एआई सहायक आज़माएं",
   }
 };
 

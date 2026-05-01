@@ -103,19 +103,19 @@ export default function Home() {
 
       {/* AI Assistant Banner */}
       <section className="py-24 bg-slate-900 text-white relative overflow-hidden rounded-t-[3rem]">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[100px] pointer-events-none"></div>
         
         <div className="container mx-auto px-4 relative z-10 text-center max-w-3xl">
-          <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl mb-6">Confused? Ask our AI Assistant</h2>
+          <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl mb-6">{t("home.ai.title")}</h2>
           <p className="text-xl font-medium text-slate-300 mb-10 leading-relaxed">
-            Powered by Google Gemini, our intelligent assistant provides accurate, structured, and calm answers to all your election-related questions in seconds.
+            {t("home.ai.subtitle")}
           </p>
           <Link
             href="/assistant"
             className="inline-flex items-center justify-center rounded-full bg-white px-10 py-4 text-base font-bold text-slate-900 shadow-xl hover:bg-slate-100 hover:scale-105 transition-all"
           >
-            Try the AI Assistant now
+            {t("home.ai.btn")}
           </Link>
         </div>
       </section>

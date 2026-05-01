@@ -6,6 +6,7 @@ import { useAppContext } from "@/context/AppContext";
 import { useTranslation } from "@/lib/i18n";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { analyticsService } from "@/services";
 
 const REGIONS = [
   { value: "india", label: "🇮🇳 India" },
@@ -127,6 +128,7 @@ export function Header() {
                     onClick={() => {
                       setRegion(r.value as import("@/context/AppContext").Region);
                       setRegionOpen(false);
+                      analyticsService.track("region_changed", { region: r.value });
                       if (r.value === "india") setStateOpen(true);
                     }}
                     className={cn(

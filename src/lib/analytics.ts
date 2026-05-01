@@ -1,12 +1,11 @@
 /**
- * Google Analytics 4 (GA4) utility module.
+ * @deprecated Use `@/services/analyticsService` instead.
  *
- * Wraps `window.gtag` with typed helpers so every page/component can fire
- * analytics events without reimplementing the null-check.
+ * This file is kept for backward compatibility with existing test mocks.
+ * All new code should import from `@/services`:
  *
- * Usage:
- *   import { trackEvent } from "@/lib/analytics";
- *   trackEvent("chat_message_sent", { language: "en", region: "india" });
+ *   import { analyticsService } from "@/services";
+ *   analyticsService.track("chat_message_sent", { ... });
  */
 
 /** GA4 Measurement ID injected via NEXT_PUBLIC_GA_MEASUREMENT_ID */

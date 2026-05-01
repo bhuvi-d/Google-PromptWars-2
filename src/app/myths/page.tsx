@@ -4,6 +4,7 @@ import { HelpCircle, AlertTriangle, ShieldCheck, ChevronRight } from "lucide-rea
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { analyticsService } from "@/services";
 
 const myths = [
   {
@@ -79,10 +80,21 @@ export default function MythsPage() {
 function FlipCard({ myth, fact }: { myth: string; fact: string }) {
   const [isFlipped, setIsFlipped] = useState(false);
 
+  const handleFlip = () => {
+    setIsFlipped(!isFlipped);
+    if (!isFlipped) {
+      analyticsService.track("myth_card_flipped", { myth: myth.slice(0, 50) });
+    }
+  };
+
   return (
     <div 
       className="group h-80 w-full cursor-pointer relative"
-      onClick={() => setIsFlipped(!isFlipped)}
+      onClick={handleFlip}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => (e.key === " " || e.key === "Enter") && handleFlip()}
+      aria-label={isFlipped ? `Fact: ${fact}` : `Myth: ${myth}. Click to reveal truth.`}
       style={{ perspective: "1000px" }}
     >
       <div 

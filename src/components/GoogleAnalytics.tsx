@@ -9,7 +9,7 @@
 "use client";
 
 import { GoogleAnalytics as NextGoogleAnalytics } from '@next/third-parties/google';
-import { GA_MEASUREMENT_ID } from "@/lib/analytics";
+import { GA_MEASUREMENT_ID } from "@/services/analyticsService";
 
 export function GoogleAnalytics() {
   if (!GA_MEASUREMENT_ID) return null;

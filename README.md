@@ -1,233 +1,280 @@
-# VOTEXA — AI-Powered Election Education Platform 🗳️
+# VOTEXA — AI-Powered Election Assistant
 
-> **Empowering citizens to vote with confidence, clarity, and zero confusion.**
+> **Empowering citizens to vote with confidence** through AI-driven civic education, personalized election journeys, and real-time guidance.
 
-VOTEXA is a production-ready civic technology platform built to make the democratic process understandable and accessible for every citizen — first-time voters, senior citizens, students, people who recently moved, or anyone who simply has questions about how elections work.
-
-Built with **Next.js**, powered by **Google Gemini 2.5 Flash**, and designed for real-world public use.
-
----
-
-## 🌟 Why This Matters
-
-Millions of eligible voters stay home because the process feels confusing, unfamiliar, or intimidating. Questions like:
-
-- *"Am I even registered?"*
-- *"What documents do I need?"*
-- *"I moved last year — can I still vote?"*
-- *"I heard EVMs can be hacked — is that true?"*
-
-These aren't silly questions. They're the questions that decide whether someone votes or doesn't. **VOTEXA eliminates that uncertainty.**
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org/)
+[![Google Gemini](https://img.shields.io/badge/Gemini_AI-Powered-4285F4?logo=google)](https://ai.google.dev/)
+[![Firebase](https://img.shields.io/badge/Firebase-Analytics%20%2B%20Firestore-FFCA28?logo=firebase)](https://firebase.google.com/)
+[![Cloud Run](https://img.shields.io/badge/Cloud_Run-Deployable-4285F4?logo=googlecloud)](https://cloud.google.com/run)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 
 ---
 
-## ✨ Features
+## 🧩 The Problem
 
-### 🤖 Gemini AI Election Assistant
-An intelligent, context-aware chat interface powered by **Google Gemini 2.5 Flash**. Users can type or use **voice input** (Web Speech API) to ask any election question and receive accurate, structured, calm answers.
+Millions of first-time and returning voters face the same challenges every election cycle:
 
-- Region-aware responses (India, USA, UK, or generic)
-- Language-aware (English and Hindi)
-- Suggested quick questions for instant guidance
-- Prompt-injected safety via input sanitization
+- **"Am I eligible to vote?"** — Confusion about age limits, registration status, and required documents.
+- **"What documents do I need?"** — Different regions have different ID requirements; misinformation is rampant.
+- **"I moved cities — can I still vote?"** — Life changes create real bureaucratic obstacles that prevent people from participating.
+- **"Where is my polling booth?"** — Finding the correct booth assigned to your registered address is non-trivial.
 
-### 🗺️ Visual Election Journey Map
-A personalized, visual step-by-step roadmap generated based on the user's profile:
-- Age group, voter status, occupation
-- Whether they've moved recently
-- First-time voter special guidance
-- Interactive node map with a **live circular readiness meter**
+These barriers disproportionately affect first-time voters, young adults, senior citizens, and persons with disabilities. The result? Millions of eligible citizens skip elections every cycle — not because they don't care, but because the process feels overwhelming.
 
-### ⏳ Interactive Election Timeline
-A horizontal, clickable timeline showing all election lifecycle stages — Announcement → Registration → Campaign → Voting → Counting — with expandable detail panels.
+## 💡 Why VOTEXA Matters
 
-### 📋 Smart Document Checklist
-Know exactly what to bring to your polling booth. Interactive cards let you mark what you have ready, with instant "Ready to Vote" feedback.
+VOTEXA addresses this civic information gap with a single, unified platform:
 
-### 🛡️ Myth vs Fact Flip Cards
-Interactive 3D flip cards that combat common election misinformation. Users click to reveal the truth behind popular myths about EVMs, NOTA, proxy voting, and more.
+1. **AI-powered answers** — Instant, accurate, region-specific election guidance powered by Google Gemini, available in English and Hindi.
+2. **Personalized journeys** — A step-by-step roadmap tailored to the voter's age, location, occupation, and history.
+3. **Myth busting** — Interactive cards that combat misinformation with verified facts.
+4. **Smart document checklists** — Region-aware lists that tell you exactly what to carry on voting day.
+5. **Accessible by design** — Large text mode, keyboard navigation, screen reader support, and 10+ language translations via Google Translate.
 
-### 🆘 Special Situations Helper
-Accordion-style guidance for edge cases:
-- Recently moved to a new city
-- Lost Voter ID card
-- Name missing from the voter list
-- Senior citizen assistance
-- Person with Disability (PwD) services
-
-### 💯 Election Readiness Score
-A persistent, local-storage-backed readiness score (0–100%) tracked in the Header. No login required — state is preserved across visits automatically.
-
-### 🌐 Region-Aware Personalization
-Select your country and state. Gemini prompts are automatically adjusted to use the right:
-- Terminology (EPIC/Voter ID for India, Absentee ballot for USA, etc.)
-- Forms and portals (NVSP, EVM for India)
-- Local context
-
-### 🌍 Multilingual Support
-Toggle between **English** and **Hindi** with a single click. The AI is instructed to respond in the selected language.
-
-### ♿ Accessibility Features
-- Large Text Mode (scales all text 115% via CSS)
-- Voice input (Web Speech API)
-- Semantic HTML throughout
-- ARIA labels on all interactive elements
-- `role="log"` and `aria-live` on chat window
-- Keyboard navigable
-- High contrast color palette
+The goal is simple: **no citizen should miss an election because of confusion.**
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-VOTEXA/
-├── src/
-│   ├── app/
-│   │   ├── api/chat/route.ts       # Gemini API — rate limiting, sanitization, region prompts
-│   │   ├── assistant/page.tsx      # AI Chat UI — voice input, suggested questions
-│   │   ├── journey/page.tsx        # Visual Node Map + Circular Readiness Meter
-│   │   ├── timeline/page.tsx       # Interactive Horizontal Timeline
-│   │   ├── documents/page.tsx      # Smart Document Checklist
-│   │   ├── myths/page.tsx          # 3D Flip Cards — Myth vs Fact
-│   │   ├── special-situations/     # Accordion Help
-│   │   └── page.tsx                # Landing page — Smart Deadline Card
-│   ├── components/
-│   │   └── Header.tsx              # Sticky nav — Readiness, Region, Lang, A11y toggles
-│   ├── context/
-│   │   └── AppContext.tsx          # Global state — region, lang, tasks, readiness
-│   └── lib/
-│       ├── utils.ts                # cn() utility
-│       └── i18n.ts                 # Translation dictionary + useTranslation hook
-├── src/__tests__/
-│   ├── readiness.test.ts           # Unit tests — score calculation
-│   └── api.test.ts                 # Unit tests — sanitization + rate limiting
-└── jest.config.js
+src/
+├── app/                        # Next.js App Router pages
+│   ├── api/chat/route.ts       # Gemini AI chat endpoint
+│   ├── assistant/              # AI Assistant (Gemini-powered chat)
+│   ├── journey/                # Personalized election roadmap
+│   ├── documents/              # Smart document checklist
+│   ├── myths/                  # Myth vs Fact cards
+│   ├── timeline/               # Election timeline
+│   ├── special-situations/     # Edge-case voter guidance
+│   ├── layout.tsx              # Root layout (GA4, Firebase, a11y)
+│   ├── robots.ts               # SEO robots config
+│   └── sitemap.ts              # Dynamic XML sitemap
+├── components/                 # Reusable UI components
+│   ├── Header.tsx              # Navigation + region selector
+│   ├── ErrorBoundary.tsx       # Render error recovery
+│   ├── GoogleAnalytics.tsx     # GA4 script injection
+│   ├── GoogleTranslate.tsx     # Google Translate widget
+│   ├── FirebaseAnalyticsProvider.tsx  # Firebase Analytics init
+│   └── PollingBoothMap.tsx     # Google Maps embed
+├── services/                   # Service layer (core business logic)
+│   ├── analyticsService.ts     # Unified GA4 + Firebase event tracking
+│   ├── storageService.ts       # Firestore data access layer
+│   ├── geminiService.ts        # Gemini AI interaction (server-side)
+│   └── index.ts                # Barrel export
+├── context/
+│   └── AppContext.tsx          # Global state (readiness, region, language)
+├── lib/                        # Shared utilities
+│   ├── firebase.ts             # Firebase SDK singleton
+│   ├── analytics.ts            # Legacy GA4 helpers (backward compat)
+│   ├── schemas.ts              # Zod validation schemas
+│   ├── i18n.ts                 # EN/HI translations
+│   └── utils.ts                # Tailwind cn() utility
+├── types/
+│   ├── index.ts                # Centralized TypeScript type definitions
+│   └── google.d.ts             # Global window type augmentations
+└── __tests__/                  # Unit test suite
+    ├── readiness.test.ts       # Readiness score logic
+    ├── journey.test.ts         # Journey generation logic
+    ├── geminiService.test.ts   # Gemini service utilities
+    ├── storageService.test.ts  # Firestore service (no-op + contract)
+    ├── pollingBoothMap.test.ts # Google Maps query construction
+    ├── schemas.test.ts         # Zod schema validation
+    ├── analytics.test.ts       # Analytics helpers
+    └── api.test.ts             # API sanitisation + rate limiting
 ```
 
-### Stack
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS v4 |
-| AI | Google Gemini 2.5 Flash |
-| Icons | Lucide React |
-| State | React Context + localStorage |
-| Tests | Jest + ts-jest |
-| Deployment | Google Cloud Run |
+---
+
+## 🔌 Google Services Integration
+
+| Service                 | Purpose                                              | Integration Point              |
+|-------------------------|------------------------------------------------------|--------------------------------|
+| **Google Gemini AI**    | Core AI assistant — answers election questions       | `services/geminiService.ts`, `/api/chat` |
+| **Firebase Analytics**  | Client-side event tracking (dual with GA4)           | `services/analyticsService.ts`, `FirebaseAnalyticsProvider.tsx` |
+| **Cloud Firestore**     | Anonymous usage logging, regional statistics         | `services/storageService.ts`, `/api/chat` |
+| **Google Maps API**     | Polling booth locator embed                          | `components/PollingBoothMap.tsx` |
+| **Google Analytics 4**  | Page views, user interaction events                  | `components/GoogleAnalytics.tsx`, `services/analyticsService.ts` |
+| **Google Translate**    | Multi-language accessibility widget                  | `components/GoogleTranslate.tsx` |
+| **Google Fonts (Inter)**| Typography via next/font                             | `app/layout.tsx` |
+| **Cloud Run**           | Production deployment target                         | `Dockerfile`, `cloudbuild.yaml` |
 
 ---
 
-## 🔌 Google Services Used
+## 🚀 Quick Start
 
-| Service | Purpose |
-|---|---|
-| **Gemini API (gemini-2.5-flash)** | Core AI intelligence for the election assistant |
-| **Google Cloud Run** | Production serverless deployment |
-| **Web Speech API** | Browser-native voice input for accessibility |
+### Prerequisites
 
----
+- Node.js 20+
+- npm 10+
+- A Google Gemini API key ([get one here](https://aistudio.google.com/app/apikey))
 
-## ⚙️ Environment Variables
+### 1. Clone & Install
 
-Create a `.env.local` file:
+```bash
+git clone https://github.com/your-username/votexa.git
+cd votexa
+npm install
+```
+
+### 2. Configure Environment
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` and add your API keys:
 
 ```env
 # Required
-GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=your_gemini_api_key
 
-# Optional — for Google Maps polling locator (future)
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_maps_api_key
+# Optional (enables additional Google services)
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_maps_key
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_key
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
-> **Security note:** The Gemini API key is only ever accessed server-side via Next.js API Routes. It is never exposed to the browser.
-
----
-
-## 🚀 Local Setup
+### 3. Run Development Server
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/yourusername/votexa.git
-cd votexa
-
-# 2. Install dependencies
-npm install
-
-# 3. Create environment file
-cp .env.example .env.local
-# Add your GEMINI_API_KEY to .env.local
-
-# 4. Start development server
 npm run dev
-# → Open http://localhost:3000
-
-# 5. Run tests
-npm test
 ```
 
----
-
-## ☁️ Deploying to Google Cloud Run
-
-```bash
-# Build Docker image
-docker build -t gcr.io/YOUR_PROJECT_ID/votexa .
-
-# Push to Google Container Registry
-docker push gcr.io/YOUR_PROJECT_ID/votexa
-
-# Deploy to Cloud Run
-gcloud run deploy votexa \
-  --image gcr.io/YOUR_PROJECT_ID/votexa \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars GEMINI_API_KEY=your_key_here
-```
+Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-npm test           # Run all tests
-npm run test:watch # Watch mode
+# Run all tests
+npm test
+
+# Watch mode
+npm run test:watch
 ```
 
-**Test Coverage:**
-- `readiness.test.ts` — 6 tests for readiness score logic (edge cases, 0%, 100%, partial)
-- `api.test.ts` — 8 tests for input sanitization (XSS, injection markers, length limits) and rate limiter logic
+### Test Coverage
+
+| Module              | Tests                                      |
+|---------------------|--------------------------------------------|
+| Readiness Score     | Score calculation, edge cases, boundaries  |
+| Journey Generation  | Profile-based roadmap, step selection      |
+| Gemini Service      | Sanitisation, system instructions          |
+| Storage Service     | Graceful no-op, API contract validation    |
+| Polling Booth Map   | Query construction, URL encoding, regions  |
+| Zod Schemas         | Validation, defaults, error messages       |
+| Analytics           | GA4 tracking, safety guards                |
+| API Route           | Rate limiting, input sanitisation          |
+
+---
+
+## ☁️ Cloud Run Deployment
+
+### Option A: Using `gcloud` CLI
+
+```bash
+# Build and deploy directly
+gcloud run deploy votexa-app \
+  --source . \
+  --region asia-south1 \
+  --allow-unauthenticated \
+  --set-env-vars GEMINI_API_KEY=your_key \
+  --port 8080
+```
+
+### Option B: Using Cloud Build (CI/CD)
+
+```bash
+# Submit a build
+gcloud builds submit --config=cloudbuild.yaml \
+  --substitutions=_GEMINI_API_KEY=your_key
+```
+
+### Option C: Docker locally
+
+```bash
+docker build -t votexa-app .
+docker run -p 8080:8080 -e GEMINI_API_KEY=your_key votexa-app
+```
+
+---
+
+## 📊 Analytics Events Tracked
+
+| Event                      | Trigger                           |
+|----------------------------|-----------------------------------|
+| `roadmap_generated`        | User creates personalized journey |
+| `readiness_score_changed`  | User completes a readiness task   |
+| `chat_message_sent`        | User sends a message to AI        |
+| `chat_response_received`   | AI responds successfully          |
+| `voice_input_used`         | User activates voice input        |
+| `myth_card_flipped`        | User reveals a myth's truth       |
+| `document_checked`         | User checks a document off        |
+| `region_changed`           | User changes region               |
+
+Events flow to both **GA4** and **Firebase Analytics** simultaneously.
+Usage events are also persisted to **Cloud Firestore** for aggregated analysis.
 
 ---
 
 ## 🔒 Security
 
-- API key is **server-side only** via Next.js API Routes
-- **Input sanitization** strips HTML tags, script blocks, and LLM injection patterns (`[INST]`, etc.)
-- **Rate limiting** (20 req/min per IP) prevents abuse
-- Security response headers set (`X-Content-Type-Options`, `X-Frame-Options`)
-- User input is hard-capped at **1000 characters** before being sent to Gemini
-- Gemini temperature set to `0.15` — minimizes hallucination for factual responses
+- **No exposed API keys** — All secrets via environment variables
+- **Input sanitisation** — HTML/script/LLM injection stripping
+- **Rate limiting** — 20 requests/minute per IP
+- **Zod validation** — Schema-based request validation
+- **Security headers** — X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
+- **Non-root Docker user** — CIS benchmark compliance
+- **Error boundaries** — Graceful error recovery in UI
 
 ---
 
-## 🌱 Future Scope
+## ♿ Accessibility
 
-- **Firestore integration** — persist user progress across devices
-- **Google Maps** — live polling booth locator
-- **Google Translate API** — expand to more regional languages
-- **Push notifications** — election deadline reminders
-- **SMS gateway** — reach non-smartphone users
-
----
-
-## 📄 License
-
-MIT License — free to use, build upon, and deploy.
+- Skip-to-content link
+- Semantic HTML (`<main>`, `<nav>`, `<footer>`, `<section>`)
+- ARIA labels, roles, and live regions
+- Keyboard navigation (all interactive elements)
+- Focus management and visible focus indicators
+- Large text mode toggle
+- Color contrast compliant palette
+- Scalable typography via `rem` units
 
 ---
 
-*Built to empower voters. Always verify official information with your local Election Commission.*
-*India: [eci.gov.in](https://eci.gov.in) · USA: [vote.gov](https://vote.gov) · UK: [electoralcommission.org.uk](https://www.electoralcommission.org.uk)*
+## 📁 Environment Variables Reference
+
+| Variable                          | Required | Description                          |
+|-----------------------------------|----------|--------------------------------------|
+| `GEMINI_API_KEY`                  | ✅        | Google Gemini AI API key             |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID`   | ❌        | GA4 Measurement ID                   |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | ❌        | Google Maps Embed API key            |
+| `NEXT_PUBLIC_FIREBASE_API_KEY`    | ❌        | Firebase Web API key                 |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | ❌        | Firebase/GCP project ID              |
+| `NEXT_PUBLIC_FIREBASE_APP_ID`     | ❌        | Firebase App ID                      |
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 16 (App Router, Server Components)
+- **Language**: TypeScript (strict mode)
+- **Styling**: Tailwind CSS 4
+- **AI**: Google Gemini API (2.5 Flash → 2.0 Flash → 1.5 Flash fallback)
+- **Analytics**: GA4 + Firebase Analytics (dual tracking)
+- **Database**: Cloud Firestore (anonymous usage logs)
+- **Maps**: Google Maps Embed API
+- **Validation**: Zod schemas
+- **Testing**: Jest + ts-jest
+- **Deployment**: Docker → Google Cloud Run
+- **CI/CD**: Cloud Build (`cloudbuild.yaml`)
+
+---
+
+## 📜 License
+
+MIT

@@ -5,6 +5,7 @@ import { Check, Info, FileText, ShieldCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAppContext } from "@/context/AppContext";
+import { analyticsService } from "@/services";
 
 // Region-aware document sets
 const documentsByRegion = {
@@ -133,6 +134,9 @@ export default function DocumentsPage() {
 
   const toggleCheck = (id: string) => {
     setChecked((prev) => ({ ...prev, [id]: !prev[id] }));
+    if (!checked[id]) {
+      analyticsService.track("document_checked", { document_id: id, region });
+    }
   };
 
   const primaryDocs = documents.filter(d => d.priority === 1);

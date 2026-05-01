@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { User, MapPin, Briefcase, Calendar, CheckCircle2, ArrowRight, BookOpen, ChevronRight, Activity, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppContext } from "@/context/AppContext";
 import { useTranslation } from "@/lib/i18n";
 import { PollingBoothMap } from "@/components/PollingBoothMap";
-import { trackEvent } from "@/lib/analytics";
+import { analyticsService } from "@/services";
 
 type Profile = {
   ageGroup: string;
@@ -32,10 +32,14 @@ export default function JourneyPage() {
       uncompleteTask(taskId);
     } else {
       completeTask(taskId);
+      analyticsService.track("readiness_score_changed", {
+        task_completed: taskId,
+        region: state.region,
+      });
     }
   };
 
-  const generateRoadmap = () => {
+  const roadmapSteps = React.useMemo(() => {
     const steps = [
       { id: "check-eligibility", title: "Check Eligibility", description: "Ensure you meet the minimum age requirement and hold citizenship." },
     ];
@@ -60,9 +64,7 @@ export default function JourneyPage() {
     steps.push({ id: "vote", title: "Cast Your Vote", description: "Head to the booth early, get inked, and press the EVM button." });
 
     return steps;
-  };
-
-  const roadmapSteps = generateRoadmap();
+  }, [profile]);
   
   // Readiness Logic
   const completedCount = roadmapSteps.filter(s => state.completedTasks.includes(s.id)).length;
@@ -86,10 +88,11 @@ export default function JourneyPage() {
             <div className="space-y-8">
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-primary" /> Age Group
+                  <label htmlFor="age-group" className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-primary" aria-hidden="true" /> Age Group
                   </label>
                   <select 
+                    id="age-group"
                     className="w-full rounded-2xl border border-slate-200 p-4 bg-slate-50 outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium"
                     value={profile.ageGroup}
                     onChange={(e) => setProfile({...profile, ageGroup: e.target.value})}
@@ -101,10 +104,11 @@ export default function JourneyPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                    <Briefcase className="w-4 h-4 text-primary" /> Current Status
+                  <label htmlFor="occupation" className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-primary" aria-hidden="true" /> Current Status
                   </label>
                   <select 
+                    id="occupation"
                     className="w-full rounded-2xl border border-slate-200 p-4 bg-slate-50 outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium"
                     value={profile.occupation}
                     onChange={(e) => setProfile({...profile, occupation: e.target.value})}
@@ -117,36 +121,54 @@ export default function JourneyPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-5 bg-slate-50 hover:bg-slate-100 transition-colors rounded-2xl border border-slate-200 cursor-pointer" onClick={() => setProfile({...profile, isFirstTime: !profile.isFirstTime})}>
+              <div
+                className="flex items-center justify-between p-5 bg-slate-50 hover:bg-slate-100 transition-colors rounded-2xl border border-slate-200 cursor-pointer"
+                onClick={() => setProfile({...profile, isFirstTime: !profile.isFirstTime})}
+                onKeyDown={(e) => (e.key === " " || e.key === "Enter") && setProfile({...profile, isFirstTime: !profile.isFirstTime})}
+                role="switch"
+                aria-checked={profile.isFirstTime}
+                aria-label="First time voter toggle"
+                tabIndex={0}
+              >
                 <div>
                   <h3 className="font-bold text-slate-900 flex items-center gap-2 text-lg">
-                    <User className="w-5 h-5 text-primary" /> First Time Voter?
+                    <User className="w-5 h-5 text-primary" aria-hidden="true" /> First Time Voter?
                   </h3>
                   <p className="text-sm text-slate-500 font-medium mt-1">Have you ever voted in an election before?</p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer pointer-events-none">
-                  <input type="checkbox" className="sr-only peer" checked={profile.isFirstTime} readOnly />
-                  <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
-                </label>
+                <div className="relative inline-flex items-center pointer-events-none" aria-hidden="true">
+                  <div className={cn("w-14 h-7 rounded-full transition-colors relative", profile.isFirstTime ? "bg-primary" : "bg-slate-200")}>
+                    <div className={cn("absolute top-[2px] left-[2px] bg-white border-slate-300 border rounded-full h-6 w-6 transition-transform", profile.isFirstTime ? "translate-x-full" : "")} />
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between p-5 bg-slate-50 hover:bg-slate-100 transition-colors rounded-2xl border border-slate-200 cursor-pointer" onClick={() => setProfile({...profile, movedRecently: !profile.movedRecently})}>
+              <div
+                className="flex items-center justify-between p-5 bg-slate-50 hover:bg-slate-100 transition-colors rounded-2xl border border-slate-200 cursor-pointer"
+                onClick={() => setProfile({...profile, movedRecently: !profile.movedRecently})}
+                onKeyDown={(e) => (e.key === " " || e.key === "Enter") && setProfile({...profile, movedRecently: !profile.movedRecently})}
+                role="switch"
+                aria-checked={profile.movedRecently}
+                aria-label="Moved recently toggle"
+                tabIndex={0}
+              >
                 <div>
                   <h3 className="font-bold text-slate-900 flex items-center gap-2 text-lg">
-                    <MapPin className="w-5 h-5 text-primary" /> Moved Recently?
+                    <MapPin className="w-5 h-5 text-primary" aria-hidden="true" /> Moved Recently?
                   </h3>
                   <p className="text-sm text-slate-500 font-medium mt-1">Have you changed your city or address recently?</p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer pointer-events-none">
-                  <input type="checkbox" className="sr-only peer" checked={profile.movedRecently} readOnly />
-                  <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
-                </label>
+                <div className="relative inline-flex items-center pointer-events-none" aria-hidden="true">
+                  <div className={cn("w-14 h-7 rounded-full transition-colors relative", profile.movedRecently ? "bg-primary" : "bg-slate-200")}>
+                    <div className={cn("absolute top-[2px] left-[2px] bg-white border-slate-300 border rounded-full h-6 w-6 transition-transform", profile.movedRecently ? "translate-x-full" : "")} />
+                  </div>
+                </div>
               </div>
 
               <button 
                 onClick={() => {
                   setStep("roadmap");
-                  trackEvent("roadmap_generated", {
+                  analyticsService.track("roadmap_generated", {
                     age_group: profile.ageGroup,
                     occupation: profile.occupation,
                     is_first_time: profile.isFirstTime,
@@ -209,7 +231,16 @@ export default function JourneyPage() {
                 const isNext = !isComplete && (index === 0 || state.completedTasks.includes(roadmapSteps[index-1].id));
                 
                 return (
-                  <div key={s.id} className="relative z-10 flex items-center group cursor-pointer" onClick={() => toggleTask(s.id)}>
+                  <div
+                    key={s.id}
+                    className="relative z-10 flex items-center group cursor-pointer"
+                    onClick={() => toggleTask(s.id)}
+                    onKeyDown={(e) => (e.key === " " || e.key === "Enter") && toggleTask(s.id)}
+                    role="checkbox"
+                    aria-checked={isComplete}
+                    aria-label={`${s.title}: ${s.description}`}
+                    tabIndex={0}
+                  >
                     {/* Node Circle */}
                     <div className={cn(
                       "absolute -left-12 flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 ring-4 ring-slate-50 shadow-sm",

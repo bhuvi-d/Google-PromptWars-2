@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Bot, User, Loader2, AlertCircle, Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppContext } from "@/context/AppContext";
-import { trackEvent } from "@/lib/analytics";
+import { analyticsService } from "@/services";
 
 type Message = {
   id: string;
@@ -86,8 +86,9 @@ export default function AssistantPage() {
       setInput("");
       recognitionRef.current?.start();
       setIsListening(true);
+      analyticsService.track("voice_input_used", { language: state.language, region: state.region });
     }
-  }, [isListening]);
+  }, [isListening, state.language, state.region]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -104,8 +105,8 @@ export default function AssistantPage() {
     setError(null);
 
     try {
-      // Track each AI message sent as a GA4 event
-      trackEvent("chat_message_sent", {
+      // Track each AI message sent via the unified analytics service
+      analyticsService.track("chat_message_sent", {
         language: state.language,
         region: state.region,
         message_length: text.trim().length,
@@ -133,11 +134,11 @@ export default function AssistantPage() {
         { id: (Date.now() + 1).toString(), role: "assistant", content: data.content },
       ]);
 
-      trackEvent("chat_response_received", { region: state.region });
+      analyticsService.track("chat_response_received", { region: state.region });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong";
       setError(message);
-      trackEvent("chat_error", { error_message: message });
+      analyticsService.track("chat_error", { error_message: message });
     } finally {
       setIsLoading(false);
     }

@@ -1,8 +1,39 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+/**
+ * POST /api/chat — Gemini-powered AI chat endpoint.
+ *
+ * Architecture:
+ *   1. Rate limiting (in-memory, per-IP)
+ *   2. Zod schema validation (ChatRequestSchema)
+ *   3. Gemini response via geminiService
+ *   4. Async Firestore logging via storageService
+ *   5. Secure response headers
+ */
+
 import { NextResponse } from "next/server";
+import { ChatRequestSchema } from "@/lib/schemas";
+import { generateResponse } from "@/services/geminiService";
+import { storageService } from "@/services/storageService";
+import type { Region, Language } from "@/types";
+
+/* ------------------------------------------------------------------ */
+/*  Rate limiter                                                       */
+/* ------------------------------------------------------------------ */
+
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
+
+/** Periodically purge expired entries to prevent memory leaks on long-running servers. */
+function purgeExpiredEntries() {
+  const now = Date.now();
+  for (const [key, val] of rateLimitMap) {
+    if (now > val.resetAt) rateLimitMap.delete(key);
+  }
+}
+// Run cleanup every 5 minutes
+if (typeof setInterval !== "undefined") {
+  setInterval(purgeExpiredEntries, 5 * 60_000);
+}
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
@@ -16,175 +47,100 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-function sanitizeInput(text: string): string {
-  return text
-    .replace(/<script[^>]*>.*?<\/script>/gis, "")
-    .replace(/<style[^>]*>.*?<\/style>/gis, "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/\[INST\]|\[\/INST\]|<s>|<\/s>/gi, "")
-    .trim()
-    .slice(0, 1000);
-}
+/* ------------------------------------------------------------------ */
+/*  Security headers                                                   */
+/* ------------------------------------------------------------------ */
 
-function buildSystemInstruction(language: string, region: string, stateName: string, profile?: string): string {
-  const langDirective =
-    language === "hi"
-      ? "CRITICAL: You MUST respond entirely in Hindi (Devanagari script)."
-      : "CRITICAL: You MUST respond entirely in English.";
+const SECURITY_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "X-XSS-Protection": "1; mode=block",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+} as const;
 
-  const regionContext =
-    region === "india"
-      ? `The user is in INDIA${stateName ? `, specifically in ${stateName}` : ""}. Use Indian election terminology: ECI, EPIC (Voter ID), NVSP portal, EVM, Form 6 for registration, Form 8 for address change, NOTA option.`
-      : region === "usa"
-      ? "The user is in the USA. Use American election terminology: Polling places, Precinct, Absentee ballot, Primary/General elections, Secretary of State for registration."
-      : region === "uk"
-      ? "The user is in the UK. Use British election terminology: Polling stations, Electoral register, Royal Mail postal vote, Returning officer."
-      : "The user's country is not specified. Provide general election education.";
-
-  const profileContext = profile ? `\n\nUser profile context: ${sanitizeInput(profile)}` : "";
-
-  return `You are VOTEXA, a trusted AI-powered civic education assistant. Your purpose is to help citizens understand elections confidently.
-
-PERSONA: Calm, clear, accurate, supportive. Never political. Never biased.
-
-RESPONSE RULES:
-- Keep answers concise and structured (use numbered lists or bullet points when helpful)
-- Always prioritize official sources and processes
-- If unsure, say so and recommend official resources
-- Decline non-election questions politely and redirect to your purpose
-- Never make up specific dates, rules, or laws
-
-REGION CONTEXT: ${regionContext}${profileContext}
-
-${langDirective}`;
-}
+/* ------------------------------------------------------------------ */
+/*  POST handler                                                       */
+/* ------------------------------------------------------------------ */
 
 export async function POST(req: Request) {
   try {
-    const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
+    // 1. Rate limit
+    const ip =
+      req.headers.get("x-forwarded-for") ??
+      req.headers.get("x-real-ip") ??
+      "unknown";
+
     if (!checkRateLimit(ip)) {
       return NextResponse.json(
         { error: "Too many requests. Please wait a moment before asking again." },
-        { status: 429 }
+        { status: 429, headers: SECURITY_HEADERS }
       );
     }
 
-    let body: unknown;
+    // 2. Parse and validate request body with Zod
+    let rawBody: unknown;
     try {
-      body = await req.json();
+      rawBody = await req.json();
     } catch {
-      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid request body." },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
     }
 
-    const { messages, language, region, stateName, profile } = body as {
-      messages: { role: string; content: string }[];
-      language?: string;
-      region?: string;
-      stateName?: string;
-      profile?: string;
-    };
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json({ error: "Invalid messages format." }, { status: 400 });
+    const parseResult = ChatRequestSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      const firstIssue = parseResult.error.issues[0]?.message ?? "Validation failed.";
+      return NextResponse.json(
+        { error: firstIssue },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
     }
 
-    for (const msg of messages) {
-      if (!msg.role || !msg.content || typeof msg.content !== "string") {
-        return NextResponse.json({ error: "Malformed message entry." }, { status: 400 });
-      }
-    }
+    const { messages, language, region, stateName, profile } = parseResult.data;
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
-    }
-
-    const systemInstruction = buildSystemInstruction(
-      language ?? "en",
-      region ?? "india",
-      stateName ?? "",
+    // 3. Generate AI response via Gemini service
+    const result = await generateResponse(
+      messages,
+      language,
+      region,
+      stateName,
       profile
     );
 
-    const userMessage = sanitizeInput(messages[messages.length - 1].content);
-    if (!userMessage) {
-      return NextResponse.json({ error: "Message cannot be empty." }, { status: 400 });
-    }
-
-    const historyContext = messages
-      .slice(-6, -1)
-      .map((m) => `${m.role === "user" ? "USER" : "ASSISTANT"}: ${sanitizeInput(m.content)}`)
-      .join("\n");
-
-    const fullPrompt = `${systemInstruction}\n\n${historyContext ? `Recent Conversation:\n${historyContext}\n\n` : ""}USER: ${userMessage}\n\nASSISTANT:`;
-
-    // Use the official Google Generative AI SDK to maximize "Google Services" score
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const MODELS = [
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash"
-    ];
-
-    let responseText = "";
-    let lastError = "";
-    let isQuotaError = false;
-
-    for (const modelName of MODELS) {
-      try {
-        const model = genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-          generationConfig: {
-            maxOutputTokens: 800,
-            temperature: 0.15,
-            topP: 0.8,
-          },
-        });
-        
-        responseText = result.response.text();
-        if (responseText) break;
-      } catch (err: any) {
-        lastError = `${modelName} threw: ${err.message || String(err)}`;
-        console.error("Gemini SDK model error:", lastError);
-        
-        if (err.status === 429 || lastError.includes("429") || lastError.includes("quota")) {
-          isQuotaError = true;
-          break; // Stop trying if we hit a quota limit
-        }
-        continue;
-      }
-    }
-
-    if (!responseText) {
-      console.error("All Gemini models failed. Last error:", lastError);
-      if (isQuotaError) {
-        return NextResponse.json(
-          { error: "The AI service is experiencing high demand. Please try again in a minute." },
-          { status: 429 }
-        );
-      }
+    if (!result.success) {
+      const status = result.isQuotaError ? 429 : 502;
       return NextResponse.json(
-        { error: "AI service is temporarily unavailable. Please try again later." },
-        { status: 502 }
+        { error: result.content },
+        { status, headers: SECURITY_HEADERS }
       );
     }
 
-    return NextResponse.json(
-      { role: "assistant", content: responseText },
-      {
-        headers: {
-          "X-Content-Type-Options": "nosniff",
-          "X-Frame-Options": "DENY",
-        },
-      }
-    );
+    // 4. Async Firestore logging (fire-and-forget, never blocks response)
+    storageService
+      .logUsageEvent(
+        "chat_message_sent",
+        region as Region,
+        stateName,
+        language as Language,
+        { model: result.model ?? "unknown" }
+      )
+      .catch(() => {});
 
+    storageService
+      .incrementRegionQueries(region as Region)
+      .catch(() => {});
+
+    // 5. Return response
+    return NextResponse.json(
+      { role: "assistant", content: result.content },
+      { headers: SECURITY_HEADERS }
+    );
   } catch (error) {
-    console.error("Chat API unhandled error:", error);
+    console.error("[ChatAPI] Unhandled error:", error);
     return NextResponse.json(
       { error: "Failed to generate response. Please try again later." },
-      { status: 500 }
+      { status: 500, headers: SECURITY_HEADERS }
     );
   }
 }

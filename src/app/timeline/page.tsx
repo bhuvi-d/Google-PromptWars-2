@@ -84,6 +84,11 @@ export default function TimelinePage() {
                   key={event.id} 
                   className="relative z-10 flex flex-col items-center cursor-pointer group"
                   onClick={() => setActiveEvent(event)}
+                  onKeyDown={(e) => (e.key === " " || e.key === "Enter") && setActiveEvent(event)}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-label={`${event.title} — ${event.date}`}
+                  tabIndex={0}
                 >
                   <div className={cn(
                     "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ring-8 ring-white mb-4",
@@ -136,15 +141,6 @@ export default function TimelinePage() {
         </Link>
       </div>
 
-      <style jsx global>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </div>
   );
 }
